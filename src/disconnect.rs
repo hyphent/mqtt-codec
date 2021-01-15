@@ -1,4 +1,4 @@
-use bytes::{BytesMut, Buf, BufMut};
+use bytes::{BytesMut, BufMut};
 
 use super::error::{EncodeError, DecodeError};
 use super::types::DecodedPacket;
