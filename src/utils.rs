@@ -8,7 +8,7 @@ pub fn decode_utf8(buffer: &mut BytesMut) -> Result<String, std::str::Utf8Error>
 pub fn decode_utf8_with_length(buffer: &mut BytesMut, string_length: usize) -> Result<String, std::str::Utf8Error> {
   let mut read_buffer = vec![0; string_length];
   buffer.copy_to_slice(&mut read_buffer);
-  let ret = std::str::from_utf8(&read_buffer)?.to_string();
+  let ret = std::str::from_utf8(&read_buffer)?.to_owned();
   Ok(ret)
 }
 
