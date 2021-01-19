@@ -10,8 +10,7 @@ pub struct ConnectPacket {
   pub client_id: String,
   pub clean_start: bool,
 
-  pub will_retain: bool,
-  pub will_qos: u8,
+  pub will_config: Option<WillConfig>,
 
   pub keep_alive: u16,
 
@@ -19,6 +18,14 @@ pub struct ConnectPacket {
   pub password: Option<String>,
 
   pub properties: Vec<Property>
+}
+
+#[derive(Clone, Debug)]
+pub struct WillConfig {
+  pub topic_name: String,
+  pub message: String,
+  pub retain: bool,
+  pub qos: u8
 }
 
 impl ConnectPacket {
@@ -62,9 +69,23 @@ impl ConnectPacket {
 
     let client_id = decode_utf8(buffer)?;
 
-    if will_flag {
-      // TODO ensure the will format
-    }
+    let will_config = match will_flag {
+      true => {
+        // TODO pass will properties
+        let _will_properties = Property::decode(buffer)?;
+
+        let topic_name = decode_utf8(buffer)?;
+        let message = decode_utf8(buffer)?;
+
+        Some(WillConfig {
+          topic_name: topic_name,
+          message: message,
+          retain: will_retain,
+          qos: will_qos
+        })
+      }
+      false => None
+    };
 
     let mut username: Option<String> = None;
     if username_flag {
@@ -80,8 +101,7 @@ impl ConnectPacket {
       client_id: client_id,
       clean_start: clean_start,
 
-      will_retain: will_retain,
-      will_qos: will_qos,
+      will_config: will_config,
   
       keep_alive: keep_alive,
 

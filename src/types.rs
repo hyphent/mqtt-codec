@@ -3,7 +3,7 @@ use bytes::BytesMut;
 use super::error::EncodeError;
 
 // import all the types
-pub use super::connect::ConnectPacket;
+pub use super::connect::{ConnectPacket, WillConfig};
 pub use super::connack::ConnackPacket;
 pub use super::publish::{PublishPacket, PublishConfig};
 pub use super::puback::PubackPacket;
