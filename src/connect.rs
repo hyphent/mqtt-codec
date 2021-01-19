@@ -23,7 +23,7 @@ pub struct ConnectPacket {
 #[derive(Clone, Debug)]
 pub struct WillConfig {
   pub topic_name: String,
-  pub message: String,
+  pub payload: String,
   pub retain: bool,
   pub qos: u8
 }
@@ -75,11 +75,11 @@ impl ConnectPacket {
         let _will_properties = Property::decode(buffer)?;
 
         let topic_name = decode_utf8(buffer)?;
-        let message = decode_utf8(buffer)?;
+        let payload = decode_utf8(buffer)?;
 
         Some(WillConfig {
           topic_name: topic_name,
-          message: message,
+          payload: payload,
           retain: will_retain,
           qos: will_qos
         })
