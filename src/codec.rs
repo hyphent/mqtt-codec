@@ -1,9 +1,11 @@
 use tokio_util::codec::{Decoder, Encoder};
 use bytes::{BytesMut, Buf, BufMut};
 
-use super::types::{DecodedPacket, PacketType, ConnectPacket, PublishPacket, PubackPacket, SubscribePacket, 
-  SubackPacket, UnsubscribePacket, UnsubackPacket, PingReqPacket, PingRespPacket};
-use super::error::{DecodeError, EncodeError};
+use crate::{
+  types::*,
+  error::{DecodeError, EncodeError},
+  header::*
+};
 
 pub struct MQTTCodec {}
 
@@ -16,8 +18,7 @@ impl Decoder for MQTTCodec {
       return Ok(None);
     }
 
-    let (packet_type, publish_config, remaining_length) = super::header::decode_fixed_header(buffer)?;
-    println!("packet_type: {}", packet_type);
+    let (packet_type, publish_config, remaining_length) = decode_fixed_header(buffer)?;
     if buffer.remaining() < remaining_length {
       return Ok(None);
     }
@@ -35,8 +36,8 @@ impl Decoder for MQTTCodec {
       PacketType::SUBACK => SubackPacket::decode(buffer, remaining_length)?,
       PacketType::UNSUBSCRIBE => UnsubscribePacket::decode(buffer, remaining_length)?,
       PacketType::UNSUBACK => UnsubackPacket::decode(buffer, remaining_length)?,
-      PacketType::PINGREQ => PingReqPacket::decode(),
-      PacketType::PINGRESP => PingRespPacket::decode(),
+      PacketType::PINGREQ => PingReqPacket::decode(buffer)?,
+      PacketType::PINGRESP => PingRespPacket::decode(buffer)?,
       _ => return Err(DecodeError::FormatError)
     };
 
@@ -56,7 +57,7 @@ impl Encoder<DecodedPacket> for MQTTCodec {
       DecodedPacket::Publish(packet) => Some(packet.config),
       _ => None
     };
-    super::header::encode_fixed_header(buffer, packet_type, &content, config)?;
+    encode_fixed_header(buffer, packet_type, &content, config)?;
 
     buffer.put(content);
     Ok(())

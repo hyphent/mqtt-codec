@@ -1,5 +1,5 @@
 use bytes::{BytesMut, Buf, BufMut};
-use super::error::{EncodeError, DecodeError};
+use crate::error::{EncodeError, DecodeError};
 
 pub fn decode(buffer: &mut BytesMut) -> Result<u64, DecodeError>  {
   let mut multiplier = 1;
@@ -37,11 +37,12 @@ pub fn encode(buffer: &mut BytesMut, mut val: u64) -> Result<(), EncodeError> {
 #[cfg(test)]
 mod tests {
   use bytes::BytesMut;
-  use super::super::error::{EncodeError, DecodeError};
+  use crate::error::{EncodeError, DecodeError};
+  use super::*;
 
   fn decode_util(slice: &[u8]) -> Result<u64, DecodeError> {
     let mut buffer = BytesMut::from(slice);
-    let value = super::decode(&mut buffer)?;
+    let value = decode(&mut buffer)?;
     Ok(value)
   }
 
@@ -65,7 +66,7 @@ mod tests {
 
   fn encode_util(value: u64) -> Result<BytesMut, EncodeError> {
     let mut buffer = BytesMut::new();
-    super::encode(&mut buffer, value)?;
+    encode(&mut buffer, value)?;
     Ok(buffer)
   }
 

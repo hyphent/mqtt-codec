@@ -25,25 +25,26 @@ pub fn get_remaining_length(buffer: &BytesMut, starting_length: usize, remaining
 #[cfg(test)]
 mod tests {
   use bytes::{BytesMut, Buf};
+  use super::*;
   const TEST_BYTES: [u8; 7] = [0x00, 0x05, 0x41, 0xF0, 0xAA, 0x9B, 0x94];
   const TEST_STRING: &str = "A𪛔";
 
   #[test]
   fn decode_utf8_test() {
     let mut buffer = BytesMut::from(&TEST_BYTES[..]);
-    assert_eq!(super::decode_utf8(&mut buffer).unwrap(), TEST_STRING);
+    assert_eq!(decode_utf8(&mut buffer).unwrap(), TEST_STRING);
   }
 
   #[test]
   fn decode_utf8_with_length_test() {
     let mut buffer = BytesMut::from(&TEST_BYTES[2..]);
-    assert_eq!(super::decode_utf8_with_length(&mut buffer, 5).unwrap(), TEST_STRING);
+    assert_eq!(decode_utf8_with_length(&mut buffer, 5).unwrap(), TEST_STRING);
   }
 
   #[test]
   fn encode_utf8_test() {
     let mut buffer = BytesMut::new();
-    super::encode_utf8(&mut buffer, TEST_STRING);
+    encode_utf8(&mut buffer, TEST_STRING);
     assert_eq!(&buffer[..], TEST_BYTES);
   }
 
@@ -52,6 +53,6 @@ mod tests {
     let mut buffer = BytesMut::from(&TEST_BYTES[..]);
     let starting_length = buffer.remaining();
     buffer.get_u16();
-    assert_eq!(super::get_remaining_length(&buffer, starting_length, 3), 1);
+    assert_eq!(get_remaining_length(&buffer, starting_length, 3), 1);
   }
 }

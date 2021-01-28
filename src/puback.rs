@@ -1,12 +1,13 @@
 use bytes::{BytesMut, Buf, BufMut};
 
-use super::error::{EncodeError, DecodeError};
-use super::types::DecodedPacket;
-use super::property::Property;
-use super::reason_code::ReasonCode;
+use crate::{
+  error::{EncodeError, DecodeError},
+  types::DecodedPacket,
+  property::Property,
+  reason_code::ReasonCode
+};
 
-#[derive(Clone, Debug)]
-pub struct PubackPacket {
+#[derive(Clone, Debug, PartialEq)]pub struct PubackPacket {
   pub packet_id: u16,
   pub reason_code: ReasonCode,
   pub properties: Vec<Property>
@@ -42,5 +43,33 @@ impl PubackPacket {
     };
 
     Ok(DecodedPacket::Puback(packet))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use bytes::BytesMut;
+  use crate::{
+    types::{Encode, DecodedPacket},
+    reason_code::ReasonCode
+  };
+  use super::*;
+
+  #[test]
+  fn codec_test() {
+    let packet = PubackPacket {
+      packet_id: 35,
+      reason_code: ReasonCode::Success,
+      properties: vec![]
+    };
+
+    let packet2 = packet.clone();
+    let mut buffer = BytesMut::new();
+    packet.encode(&mut buffer).unwrap();
+
+    let remaining_length = buffer.remaining();
+    let packet = PubackPacket::decode(&mut buffer, remaining_length).unwrap();
+
+    assert_eq!(DecodedPacket::Puback(packet2), packet);
   }
 }

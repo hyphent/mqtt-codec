@@ -1,9 +1,12 @@
 use bytes::{BytesMut, Buf, BufMut};
-use super::error::{EncodeError, DecodeError};
-use super::utils::{decode_utf8, encode_utf8};
-use super::variable_integer;
 
-#[derive(Clone, Debug)]
+use crate::{
+  error::{EncodeError, DecodeError},
+  variable_integer,
+  utils::{decode_utf8, encode_utf8, get_remaining_length}
+};
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Property {
   PayloadFormatIndicator(u8),
   MessageExpiryInterval(u32),
@@ -40,7 +43,7 @@ impl Property {
 
     let starting_length = buffer.remaining();
     let mut properties = Vec::new();
-    while super::utils::get_remaining_length(&buffer, starting_length, remaining_length) > 0 {
+    while get_remaining_length(&buffer, starting_length, remaining_length) > 0 {
       let property = match buffer.get_u8() {
         0x01 => Property::PayloadFormatIndicator(buffer.get_u8()),
         0x02 => Property::MessageExpiryInterval(buffer.get_u32()),

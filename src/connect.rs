@@ -1,11 +1,13 @@
-use bytes::{BytesMut, Buf};
+use bytes::{BytesMut, Buf, BufMut};
 
-use super::types::DecodedPacket;
-use super::utils::decode_utf8;
-use super::error::DecodeError;
-use super::property::Property;
+use crate::{
+  error::{EncodeError, DecodeError},
+  types::DecodedPacket,
+  property::Property,
+  utils::{decode_utf8, encode_utf8}
+};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConnectPacket {
   pub client_id: String,
   pub clean_start: bool,
@@ -20,30 +22,92 @@ pub struct ConnectPacket {
   pub properties: Vec<Property>
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WillConfig {
-  pub topic_name: String,
+  pub topic: String,
   pub payload: String,
   pub retain: bool,
-  pub qos: u8
+  pub qos: u8,
+  pub properties: Vec<Property>
 }
 
+const PROTOCOL_NAME: &'static str = "MQTT";
+const PROTOCOL_VERSION: u8 = 5;
+
+impl super::types::Encode for ConnectPacket {
+  fn encode(&self, buffer: &mut BytesMut) -> Result<(), EncodeError> {
+    encode_utf8(buffer, PROTOCOL_NAME);
+    buffer.put_u8(PROTOCOL_VERSION);
+
+    self.encode_connect(buffer);
+
+    buffer.put_u16(self.keep_alive);
+
+    Property::encode(buffer, &self.properties)?;
+
+    encode_utf8(buffer, &self.client_id);
+
+    if let Some(will_config) = &self.will_config {
+      Property::encode(buffer, &will_config.properties)?;
+      encode_utf8(buffer, &will_config.topic);
+      encode_utf8(buffer, &will_config.payload);
+    }
+
+    if let Some(username) = &self.username {
+      encode_utf8(buffer, &username);
+    }
+
+    if let Some(password) = &self.password {
+      encode_utf8(buffer, &password);
+    }
+
+    Ok(())
+  }
+}
+
+
 impl ConnectPacket {
+  fn encode_connect(&self, buffer: &mut BytesMut) {
+    let mut connect_flags = 0;
+    if let Some(_) = self.username {
+      connect_flags += 0b10000000; 
+    }
+    if let Some(_) = self.password {
+      connect_flags += 0b1000000;
+    }
+
+    if let Some(will_config) = &self.will_config {
+      connect_flags += 0b100;
+
+      if will_config.retain {
+        connect_flags += 0b100000;
+      }
+
+      connect_flags += will_config.qos << 3;
+    }
+
+    if self.clean_start {
+      connect_flags += 0b10;
+    }
+
+    buffer.put_u8(connect_flags);
+  }
+
   fn check_protocol(buffer: &mut BytesMut) -> Result<(), DecodeError> {
     let protocol_name = decode_utf8(buffer).map_err(|_| DecodeError::ProtocolNotSupportedError)?;
 
-    if protocol_name != "MQTT" {
+    if protocol_name != PROTOCOL_NAME {
       return Err(DecodeError::ProtocolNotSupportedError);
     }
     
     let protocol_version = buffer.get_u8();
-    if protocol_version != 5 {
+    if protocol_version != PROTOCOL_VERSION {
       return Err(DecodeError::ProtocolNotSupportedError);
     }
     Ok(())
   }
 
-  fn parse_connect_flags(connect_flags: u8) -> Result<(bool, bool, bool, u8, bool, bool), DecodeError> {
+  fn decode_connect_flags(connect_flags: u8) -> Result<(bool, bool, bool, u8, bool, bool), DecodeError> {
     if connect_flags & 0b1 != 0 {
       return Err(DecodeError::FormatError);
     }
@@ -59,9 +123,9 @@ impl ConnectPacket {
   }
 
   pub fn decode(buffer: &mut BytesMut) -> Result<DecodedPacket, DecodeError> {
-    ConnectPacket::check_protocol(buffer)?;
+    Self::check_protocol(buffer)?;
 
-    let (username_flag, password_flag, will_retain, will_qos, will_flag, clean_start) = ConnectPacket::parse_connect_flags(buffer.get_u8())?;
+    let (username_flag, password_flag, will_retain, will_qos, will_flag, clean_start) = Self::decode_connect_flags(buffer.get_u8())?;
 
     let keep_alive = buffer.get_u16();
 
@@ -72,16 +136,17 @@ impl ConnectPacket {
     let will_config = match will_flag {
       true => {
         // TODO pass will properties
-        let _will_properties = Property::decode(buffer)?;
+        let will_properties = Property::decode(buffer)?;
 
-        let topic_name = decode_utf8(buffer)?;
+        let topic = decode_utf8(buffer)?;
         let payload = decode_utf8(buffer)?;
 
         Some(WillConfig {
-          topic_name: topic_name,
-          payload: payload,
+          topic,
+          payload,
           retain: will_retain,
-          qos: will_qos
+          qos: will_qos,
+          properties: will_properties
         })
       }
       false => None
@@ -98,19 +163,50 @@ impl ConnectPacket {
     }
 
     let packet = ConnectPacket {
-      client_id: client_id,
-      clean_start: clean_start,
-
-      will_config: will_config,
-  
-      keep_alive: keep_alive,
-
-      username: username,
-      password: password,
-
-      properties: properties
+      client_id,
+      clean_start,
+      will_config,
+      keep_alive,
+      username,
+      password,
+      properties
     };
     
     Ok(DecodedPacket::Connect(packet))
+  }
+}
+
+
+#[cfg(test)]
+mod tests {
+  use bytes::BytesMut;
+  use crate::types::{Encode, DecodedPacket};
+  use super::*;
+
+  #[test]
+  fn codec_test() {
+    let packet = ConnectPacket {
+      client_id: "test".to_owned(),
+      clean_start: true,
+      will_config: Some(WillConfig {
+        topic: "topic".to_owned(),
+        payload: "payload".to_owned(),
+        retain: false,
+        qos: 1,
+        properties: vec![]
+      }),
+      keep_alive: 20,
+      username: Some("username".to_owned()),
+      password: Some("password".to_owned()),
+      properties: vec![]
+    };
+
+    let packet2 = packet.clone();
+    let mut buffer = BytesMut::new();
+    packet.encode(&mut buffer).unwrap();
+
+    let packet = ConnectPacket::decode(&mut buffer).unwrap();
+
+    assert_eq!(DecodedPacket::Connect(packet2), packet);
   }
 }

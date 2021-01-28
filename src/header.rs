@@ -1,11 +1,11 @@
 use bytes::{BytesMut, Buf, BufMut};
 
-use super::error::{EncodeError, DecodeError};
-use super::variable_integer;
-
-use super::types::PacketType;
-use super::publish::PublishConfig;
-
+use crate::{
+  error::{EncodeError, DecodeError},
+  variable_integer,
+  types::PacketType,
+  publish::PublishConfig
+};
 
 pub fn encode_fixed_header(buffer: &mut BytesMut, packet_type: PacketType, payload: &BytesMut, 
   config: Option<PublishConfig>) -> Result<(), EncodeError> {
@@ -61,7 +61,8 @@ pub fn decode_fixed_header(buffer: &mut BytesMut) -> Result<(PacketType, Option<
 mod tests {
   use bytes::BytesMut;
 
-  use super::super::types::{PacketType::*, PublishConfig};
+  use crate::types::{PacketType::*, PublishConfig};
+  use super::*;
 
   const ENCODE_PAYLOAD: [u8; 2] = [0x01, 0x02];
 
@@ -70,7 +71,7 @@ mod tests {
     let payload = BytesMut::from(&ENCODE_PAYLOAD[..]);
     for packet_type in [RESERVED, CONNECT, CONNACK, PUBACK, PUBREC, PUBCOMP, SUBACK, UNSUBACK, PINGREQ, PINGRESP, DISCONNECT, AUTH].iter() {
       let mut buffer = BytesMut::new();
-      super::encode_fixed_header(&mut buffer, *packet_type, &payload, None).unwrap();
+      encode_fixed_header(&mut buffer, *packet_type, &payload, None).unwrap();
       assert_eq!(&buffer[..], [(*packet_type as u8) << 4, 0x02]);
     }
   }
@@ -80,7 +81,7 @@ mod tests {
     let payload = BytesMut::from(&ENCODE_PAYLOAD[..]);
     for packet_type in [PUBREL, SUBSCRIBE, UNSUBSCRIBE].iter() {
       let mut buffer = BytesMut::new();
-      super::encode_fixed_header(&mut buffer, *packet_type, &payload, None).unwrap();
+      encode_fixed_header(&mut buffer, *packet_type, &payload, None).unwrap();
       assert_eq!(&buffer[..], [((*packet_type as u8) << 4) + 0b0010, 0x02]);
     }
   }
@@ -92,7 +93,7 @@ mod tests {
       let mut buffer = BytesMut::new();
       let config = PublishConfig { dup: (i % 2) != 0, qos: ((i / 2) % 3), retain: ((i / 6) % 2) != 0 };
       let first_byte = (3 << 4) + ((config.dup as u8) << 3) + (config.qos << 1) + (config.retain as u8);
-      super::encode_fixed_header(&mut buffer, PUBLISH, &payload, Some(config)).unwrap();
+      encode_fixed_header(&mut buffer, PUBLISH, &payload, Some(config)).unwrap();
       assert_eq!(&buffer[..], [first_byte, 0x02]);
     }
   }
@@ -101,7 +102,7 @@ mod tests {
   fn decode_fixed_header_general_test() {
     for expected_packet_type in [RESERVED, CONNECT, CONNACK, PUBACK, PUBREC, PUBCOMP, SUBACK, UNSUBACK, PINGREQ, PINGRESP, DISCONNECT, AUTH].iter() {
       let mut buffer = BytesMut::from(&[(*expected_packet_type as u8) << 4, 0x02][..]);
-      let (packet_type, publish_config, remaining_length) = super::decode_fixed_header(&mut buffer).unwrap();
+      let (packet_type, publish_config, remaining_length) = decode_fixed_header(&mut buffer).unwrap();
       assert_eq!(packet_type, *expected_packet_type);
       assert_eq!(publish_config.is_none(), true);
       assert_eq!(remaining_length, 2);
@@ -112,7 +113,7 @@ mod tests {
   fn decode_fixed_header_special_flags_test() {
     for expected_packet_type in [PUBREL, SUBSCRIBE, UNSUBSCRIBE].iter() {
       let mut buffer = BytesMut::from(&[((*expected_packet_type as u8) << 4) + 0b0010, 0x02][..]);
-      let (packet_type, publish_config, remaining_length) = super::decode_fixed_header(&mut buffer).unwrap();
+      let (packet_type, publish_config, remaining_length) = decode_fixed_header(&mut buffer).unwrap();
       assert_eq!(packet_type, *expected_packet_type);
       assert_eq!(publish_config.is_none(), true);
       assert_eq!(remaining_length, 2);
@@ -126,7 +127,7 @@ mod tests {
       let first_byte = (3 << 4) + ((config.dup as u8) << 3) + (config.qos << 1) + (config.retain as u8);
 
       let mut buffer = BytesMut::from(&[first_byte, 0x02][..]);
-      let (packet_type, publish_config, remaining_length) = super::decode_fixed_header(&mut buffer).unwrap();
+      let (packet_type, publish_config, remaining_length) = decode_fixed_header(&mut buffer).unwrap();
       assert_eq!(packet_type, PUBLISH);
       assert_eq!(publish_config, Some(config));
       assert_eq!(remaining_length, 2);

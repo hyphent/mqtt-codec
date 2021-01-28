@@ -1,8 +1,11 @@
 use bytes::BytesMut;
 
-use super::error::EncodeError;
-use super::types::DecodedPacket;
+use crate::{
+  error::{EncodeError, DecodeError},
+  types::DecodedPacket
+};
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct PingRespPacket {}
 
 impl super::types::Encode for PingRespPacket {
@@ -12,7 +15,27 @@ impl super::types::Encode for PingRespPacket {
 }
 
 impl PingRespPacket {
-  pub fn decode() -> DecodedPacket {
-    DecodedPacket::PingResp(PingRespPacket {})
+  pub fn decode(_buffer: &mut BytesMut) -> Result<DecodedPacket, DecodeError> {
+    Ok(DecodedPacket::PingResp(PingRespPacket {}))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use bytes::BytesMut;
+  use crate::types::{Encode, DecodedPacket};
+  use super::*;
+
+  #[test]
+  fn codec_test() {
+    let packet = PingRespPacket {};
+
+    let packet2 = packet.clone();
+    let mut buffer = BytesMut::new();
+    packet.encode(&mut buffer).unwrap();
+
+    let packet = PingRespPacket::decode(&mut buffer).unwrap();
+
+    assert_eq!(DecodedPacket::PingResp(packet2), packet);
   }
 }

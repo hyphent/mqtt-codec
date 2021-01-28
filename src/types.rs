@@ -1,27 +1,28 @@
 use bytes::BytesMut;
 
-use super::error::EncodeError;
+use crate::error::EncodeError;
 
 // import all the types
-pub use super::connect::{ConnectPacket, WillConfig};
-pub use super::connack::ConnackPacket;
-pub use super::publish::{PublishPacket, PublishConfig};
-pub use super::puback::PubackPacket;
-pub use super::subscribe::{SubscribePacket, SubscriptionConfig};
-pub use super::suback::SubackPacket;
-pub use super::unsubscribe::UnsubscribePacket;
-pub use super::unsuback::UnsubackPacket;
-pub use super::pingreq::PingReqPacket;
-pub use super::pingresp::PingRespPacket;
-pub use super::disconnect::DisconnectPacket;
+pub use crate::connect::{ConnectPacket, WillConfig};
+pub use crate::connack::ConnackPacket;
+pub use crate::publish::{PublishPacket, PublishConfig};
+pub use crate::puback::PubackPacket;
+pub use crate::subscribe::{SubscribePacket, SubscriptionConfig};
+pub use crate::suback::SubackPacket;
+pub use crate::unsubscribe::UnsubscribePacket;
+pub use crate::unsuback::UnsubackPacket;
+pub use crate::pingreq::PingReqPacket;
+pub use crate::pingresp::PingRespPacket;
+pub use crate::disconnect::DisconnectPacket;
 
-pub use super::property::Property;
-pub use super::reason_code::ReasonCode;
+pub use crate::property::Property;
+pub use crate::reason_code::ReasonCode;
 
 pub trait Encode {
   fn encode(&self, buffer: &mut BytesMut) -> Result<(), EncodeError>;
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum DecodedPacket {
   Connect(ConnectPacket),
   Connack(ConnackPacket),

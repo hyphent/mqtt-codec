@@ -1,14 +1,32 @@
-use bytes::{BytesMut, Buf};
+use bytes::{BytesMut, Buf, BufMut};
 
-use super::error::{DecodeError};
-use super::types::DecodedPacket;
-use super::property::Property;
+use crate::{
+  error::{EncodeError, DecodeError},
+  types::DecodedPacket,
+  property::Property,
+  utils::{decode_utf8, encode_utf8, get_remaining_length}
+};
 
-#[derive(Clone, Debug)]
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct UnsubscribePacket {
   pub packet_id: u16,
-  pub topic_names: Vec<String>,
+  pub topics: Vec<String>,
   pub properties: Vec<Property>
+}
+
+impl super::types::Encode for UnsubscribePacket {
+  fn encode(&self, buffer: &mut BytesMut) -> Result<(), EncodeError> {
+    buffer.put_u16(self.packet_id);
+
+    Property::encode(buffer, &self.properties)?;
+
+    for topic in &self.topics {
+      encode_utf8(buffer, topic);
+    }
+
+    Ok(())
+  }
 }
 
 impl UnsubscribePacket {
@@ -18,19 +36,44 @@ impl UnsubscribePacket {
 
     let properties = Property::decode(buffer)?;
 
-    let mut topic_names = Vec::new();
+    let mut topics = Vec::new();
 
-    while super::utils::get_remaining_length(&buffer, starting_length, remaining_length) > 0 {
-      let topic_name = super::utils::decode_utf8(buffer)?;
-      topic_names.push(topic_name);
+    while get_remaining_length(&buffer, starting_length, remaining_length) > 0 {
+      let topic = decode_utf8(buffer)?;
+      topics.push(topic);
     }
 
     let packet = UnsubscribePacket {
       packet_id: packet_id,
-      topic_names: topic_names,
+      topics: topics,
       properties: properties
     };
 
     Ok(DecodedPacket::Unsubscribe(packet))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use bytes::BytesMut;
+  use crate::types::{Encode, DecodedPacket};
+  use super::*;
+
+  #[test]
+  fn codec_test() {
+    let packet = UnsubscribePacket {
+      packet_id: 32,
+      topics: vec!["test".to_owned(), "test1".to_owned()],
+      properties: vec![]
+    };
+
+    let packet2 = packet.clone();
+    let mut buffer = BytesMut::new();
+    packet.encode(&mut buffer).unwrap();
+
+    let remaining_length = buffer.remaining();
+    let packet = UnsubscribePacket::decode(&mut buffer, remaining_length).unwrap();
+
+    assert_eq!(DecodedPacket::Unsubscribe(packet2), packet);
   }
 }

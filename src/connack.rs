@@ -1,11 +1,13 @@
 use bytes::{BytesMut, Buf, BufMut};
 
-use super::error::{EncodeError, DecodeError};
-use super::types::DecodedPacket;
-use super::property::Property;
-use super::reason_code::ReasonCode;
+use crate::{
+  error::{EncodeError, DecodeError},
+  types::DecodedPacket,
+  property::Property,
+  reason_code::ReasonCode
+};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConnackPacket {
   pub session_present: bool,
   pub reason_code: ReasonCode,
@@ -49,3 +51,29 @@ impl ConnackPacket {
   }
 }
 
+#[cfg(test)]
+mod tests {
+  use bytes::BytesMut;
+  use crate::{
+    types::{Encode, DecodedPacket},
+    reason_code::ReasonCode
+  };
+  use super::*;
+
+  #[test]
+  fn codec_test() {
+    let packet = ConnackPacket {
+      session_present: true,
+      reason_code: ReasonCode::Success,
+      properties: vec![]
+    };
+
+    let packet2 = packet.clone();
+    let mut buffer = BytesMut::new();
+    packet.encode(&mut buffer).unwrap();
+
+    let packet = ConnackPacket::decode(&mut buffer).unwrap();
+
+    assert_eq!(DecodedPacket::Connack(packet2), packet);
+  }
+}
