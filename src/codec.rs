@@ -25,6 +25,7 @@ impl Decoder for MQTTCodec {
 
     let decoded_packet = match packet_type {
       PacketType::CONNECT => ConnectPacket::decode(buffer)?,
+      PacketType::CONNACK => ConnackPacket::decode(buffer)?,
       PacketType::PUBLISH => {
         match publish_config {
           Some(config) => PublishPacket::decode(buffer, config, remaining_length)?,
