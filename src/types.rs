@@ -40,10 +40,13 @@ pub enum DecodedPacket {
 impl DecodedPacket {
   pub fn encode(&self, buffer: &mut BytesMut) -> Result<(), EncodeError>{
     match self {
+      DecodedPacket::Connect(item) => item.encode(buffer)?,
       DecodedPacket::Connack(item) => item.encode(buffer)?,
       DecodedPacket::Publish(item) => item.encode(buffer)?,
       DecodedPacket::Puback(item) => item.encode(buffer)?,
+      DecodedPacket::Subscribe(item) => item.encode(buffer)?,
       DecodedPacket::Suback(item) => item.encode(buffer)?,
+      DecodedPacket::Unsubscribe(item) => item.encode(buffer)?,
       DecodedPacket::Unsuback(item) => item.encode(buffer)?,
       DecodedPacket::PingReq(item) => item.encode(buffer)?,
       DecodedPacket::PingResp(item) => item.encode(buffer)?,
