@@ -135,7 +135,6 @@ impl ConnectPacket {
 
     let will_config = match will_flag {
       true => {
-        // TODO pass will properties
         let will_properties = Property::decode(buffer)?;
 
         let topic = decode_utf8(buffer)?;
