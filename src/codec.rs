@@ -14,34 +14,36 @@ impl Decoder for MQTTCodec {
   type Error = DecodeError;
 
   fn decode(&mut self, buffer: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-    if buffer.remaining() < 2 {
+    let mut read_buffer = buffer.clone();
+    if read_buffer.remaining() < 2 {
       return Ok(None);
     }
 
-    let (packet_type, publish_config, remaining_length) = decode_fixed_header(buffer)?;
-    if buffer.remaining() < remaining_length {
+    let (packet_type, publish_config, remaining_length) = decode_fixed_header(&mut read_buffer)?;
+    if read_buffer.remaining() < remaining_length {
       return Ok(None);
     }
 
     let decoded_packet = match packet_type {
-      PacketType::CONNECT => ConnectPacket::decode(buffer)?,
-      PacketType::CONNACK => ConnackPacket::decode(buffer)?,
+      PacketType::CONNECT => ConnectPacket::decode(&mut read_buffer)?,
+      PacketType::CONNACK => ConnackPacket::decode(&mut read_buffer)?,
       PacketType::PUBLISH => {
         match publish_config {
-          Some(config) => PublishPacket::decode(buffer, config, remaining_length)?,
+          Some(config) => PublishPacket::decode(&mut read_buffer, config, remaining_length)?,
           _ => return Err(DecodeError::FormatError) 
         }
       },
-      PacketType::PUBACK => PubackPacket::decode(buffer, remaining_length)?,
-      PacketType::SUBSCRIBE => SubscribePacket::decode(buffer, remaining_length)?,
-      PacketType::SUBACK => SubackPacket::decode(buffer, remaining_length)?,
-      PacketType::UNSUBSCRIBE => UnsubscribePacket::decode(buffer, remaining_length)?,
-      PacketType::UNSUBACK => UnsubackPacket::decode(buffer, remaining_length)?,
-      PacketType::PINGREQ => PingReqPacket::decode(buffer)?,
-      PacketType::PINGRESP => PingRespPacket::decode(buffer)?,
+      PacketType::PUBACK => PubackPacket::decode(&mut read_buffer, remaining_length)?,
+      PacketType::SUBSCRIBE => SubscribePacket::decode(&mut read_buffer, remaining_length)?,
+      PacketType::SUBACK => SubackPacket::decode(&mut read_buffer, remaining_length)?,
+      PacketType::UNSUBSCRIBE => UnsubscribePacket::decode(&mut read_buffer, remaining_length)?,
+      PacketType::UNSUBACK => UnsubackPacket::decode(&mut read_buffer, remaining_length)?,
+      PacketType::PINGREQ => PingReqPacket::decode(&mut read_buffer)?,
+      PacketType::PINGRESP => PingRespPacket::decode(&mut read_buffer)?,
       _ => return Err(DecodeError::FormatError)
     };
 
+    buffer.advance(buffer.remaining() - read_buffer.remaining());
     Ok(Some(decoded_packet))
   }
 }

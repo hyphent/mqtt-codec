@@ -1,6 +1,6 @@
 [package]
 name = "mqtt-codec"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["boom <warunyou_d@yahoo.com>"]
 edition = "2018"
 
@@ -9,3 +9,5 @@ edition = "2018"
 [dependencies]
 tokio-util = { version = "0.6.0", features = ["codec"] }
 bytes = "1.0.0"
+sha-1 = "0.9.3"
+base64 = "0.13.0"

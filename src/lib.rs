@@ -2,6 +2,7 @@ pub mod types;
 pub mod header;
 pub mod error;
 pub mod codec;
+pub mod websocket;
 
 mod connect;
 mod connack;

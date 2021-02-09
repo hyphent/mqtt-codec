@@ -25,6 +25,7 @@ impl From<Error> for DecodeError {
 pub enum EncodeError {
   VariableIntegerOutOfRangeError,
   FormatError,
+  WebsocketError,
   IoError(Error)
 }
 
