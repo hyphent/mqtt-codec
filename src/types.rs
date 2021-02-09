@@ -50,8 +50,7 @@ impl DecodedPacket {
       DecodedPacket::Unsuback(item) => item.encode(buffer)?,
       DecodedPacket::PingReq(item) => item.encode(buffer)?,
       DecodedPacket::PingResp(item) => item.encode(buffer)?,
-      DecodedPacket::Disconnect(item) => item.encode(buffer)?,
-      _ => {}
+      DecodedPacket::Disconnect(item) => item.encode(buffer)?
     };
     Ok(())
   }
