@@ -2,7 +2,7 @@
 name = "mqtt-codec"
 version = "0.1.2"
 authors = ["boom <warunyou_d@yahoo.com>"]
-edition = "2020"
+edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
