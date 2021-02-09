@@ -7,7 +7,17 @@ use crate::{
   codec::MQTTCodec
 };
 
-pub struct WebsocketCodec {}
+pub struct WebsocketCodec {
+  mqtt_buffer: BytesMut
+}
+
+impl WebsocketCodec {
+  pub fn new() -> Self {
+    Self {
+      mqtt_buffer: BytesMut::new()
+    }
+  }
+}
 
 impl Decoder for WebsocketCodec {
   type Item = DecodedPacket;
@@ -15,8 +25,6 @@ impl Decoder for WebsocketCodec {
 
   fn decode(&mut self, buffer: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
     let mut read_buffer = buffer.clone();
-
-    let mut mqtt_buffer = BytesMut::new();
     let mut fin = false;
     
     while read_buffer.remaining() > 0 {
@@ -29,7 +37,7 @@ impl Decoder for WebsocketCodec {
         fin = (first_byte & 0b10000000) == 0b10000000;
         let opcode = first_byte & 0b1111;
   
-        if first_byte & 0b01110000 != 0 || opcode != 2 {
+        if first_byte & 0b01110000 != 0 || (opcode != 2 && opcode != 0) {
           return Err(DecodeError::FormatError);
         }
   
@@ -65,13 +73,14 @@ impl Decoder for WebsocketCodec {
 
         read_buffer.advance(payload_length);
 
-        mqtt_buffer.reserve(payload_length);
-        mqtt_buffer.put_slice(&message);
+        self.mqtt_buffer.reserve(payload_length);
+        self.mqtt_buffer.put_slice(&message);
       }
       
       let mut codec = MQTTCodec {};
-      if let Ok(Some(packet)) = codec.decode(&mut mqtt_buffer) {
-        buffer.advance(buffer.remaining() - read_buffer.remaining());
+      buffer.advance(buffer.remaining() - read_buffer.remaining());
+      if let Ok(Some(packet)) = codec.decode(&mut self.mqtt_buffer) {
+        self.mqtt_buffer.clear();
         return Ok(Some(packet));
       }
       fin = false;
